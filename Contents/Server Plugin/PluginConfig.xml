@@ -12,4 +12,7 @@
 	<Field id="textlocalFromValue" type="textfield" defaultValue="MyHome">
 		<Label>From Name:</Label>
 	</Field>
+	<Field id="textlocalCreditWarning" type="textfield" defaultValue="10">
+		<Label>Credit Warning at:</Label>
+	</Field>
 </PluginConfig>

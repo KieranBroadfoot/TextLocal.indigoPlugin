@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<Events>
+    <Event id="lowCredit">
+        <Name>TextLocal Credit is Low</Name>
+    </Event>
+    <Event id="expiredCredit">
+        <Name>TextLocal Credit has Expired</Name>
+    </Event>
+</Events>
