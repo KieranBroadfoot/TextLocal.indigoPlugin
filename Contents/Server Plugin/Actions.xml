@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<Actions>
+    <Action id="sendTextLocalMessage"> 
+        <Name>Send a TextLocal message</Name>
+        <CallbackMethod>sendTextLocalMessage</CallbackMethod>
+		<ConfigUI>
+			<Field id="message" type="label">
+		        	<Label>To simplify configuration this action requires the name of a pre-defined variable containing the phone number to which you want to send the message.  Note the value format should be all digits, no spaces, and include the country code, e.g. 447900000000</Label>
+		    	</Field>
+			<Field id="tlPhoneNumber" type="textfield" defaultValue="myMobileNumber">
+				<Label>Phone number variable:</Label>
+			</Field>
+			<Field id="tlMessage" type="textfield" defaultValue="Julia is home">
+				<Label>Message:</Label>
+			</Field>
+		</ConfigUI>
+    </Action>
+</Actions>

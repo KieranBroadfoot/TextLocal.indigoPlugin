@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<PluginConfig>
+	<Field id="topLabel" type="label" fontSize="small" fontColor="darkgray">
+		<Label>Please provide your TextLocal username and password. You can also specify a short (11 character) "from" value for your SMS</Label>
+	</Field>
+	<Field id="textlocalUser" type="textfield" defaultValue="user">
+		<Label>Username:</Label>
+	</Field>
+	<Field id="textlocalPasswd" type="textfield" defaultValue="password">
+		<Label>Password:</Label>
+	</Field>
+	<Field id="textlocalFromValue" type="textfield" defaultValue="MyHome">
+		<Label>From Name:</Label>
+	</Field>
+</PluginConfig>
