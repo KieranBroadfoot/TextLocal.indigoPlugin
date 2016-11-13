@@ -1,38 +1,20 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 ####################
-# Copyright (c) 2013, Kieran J. Broadfoot. All rights reserved.
+# Copyright (c) 2016, Kieran J. Broadfoot. All rights reserved.
 #
 
-################################################################################
-# Imports
-################################################################################
 import sys
 import os
 import re
 import urllib
 import simplejson as json
 
-################################################################################
-# Globals
-################################################################################
 kTriggerType_CreditLow = "lowCredit"
 kTriggerType_CreditExpired = "expiredCredit"
 
-########################################
-def updateVar(name, value, folder=0):
-	if name not in indigo.variables:
-		indigo.variable.create(name, value=value, folder=folder)
-	else:
-		indigo.variable.updateValue(name, value)
-
-################################################################################
 class Plugin(indigo.PluginBase):
-	########################################
-	# Class properties
-	########################################
-	
-	########################################
+
 	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs): 
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 		self.events = dict()
@@ -42,10 +24,25 @@ class Plugin(indigo.PluginBase):
 		self.textlocalPasswd = pluginPrefs.get("textlocalPasswd", "")
 		self.textlocalFromValue = pluginPrefs.get("textlocalFromValue", "MyHome")
 		self.textlocalCreditWarning = pluginPrefs.get("textlocalCreditWarning", "10")
-	
-	########################################
+
 	def __del__(self):
 		indigo.PluginBase.__del__(self)
+
+	def startup(self):
+		self.logger.info("starting textlocal plugin")
+
+	def validatePrefsConfigUi(self, valuesDict):
+		self.textlocalUser = valuesDict["textlocalUser"]
+		self.textlocalPasswd = valuesDict["textlocalPasswd"]
+		self.textlocalFromValue = valuesDict["textlocalFromValue"]
+		try:
+			int(valuesDict["textlocalCreditWarning"])
+			self.textlocalCreditWarning = valuesDict["textlocalCreditWarning"]
+		except ValueError:
+			errorDict = indigo.Dict()
+			errorDict["textlocalCreditWarning"] = "Must be a whole number"
+			return (False, valuesDict, errorDict)
+		return True
 		
 	def triggerStartProcessing(self, trigger):
 		if (trigger.pluginTypeId == kTriggerType_CreditLow) or (trigger.pluginTypeId == kTriggerType_CreditExpired):
@@ -59,11 +56,14 @@ class Plugin(indigo.PluginBase):
 	
 	def sendTextLocalMessage(self, action, dev):
 		if not self.textlocalUser or not self.textlocalPasswd:
-			indigo.server.log("No valid user/password combination provided.")
+			self.logger.info("No valid user/password combination provided.")
+			return
 		if not action.props.get("tlPhoneNumber",""):
-			indigo.server.log("No phone number provided.")
+			self.logger.info("No phone number provided.")
+			return
 		if not action.props.get("tlMessage",""):
-			indigo.server.log("No message provided.")
+			self.logger.info("No message provided.")
+			return
 
 		phoneNumbers = []
 		for number in action.props.get("tlPhoneNumber","").split(","):
@@ -72,7 +72,7 @@ class Plugin(indigo.PluginBase):
 		params = {'uname': self.textlocalUser, 
 			'pword': self.textlocalPasswd, 
 			'selectednums': ",".join(phoneNumbers),
-			'message' : action.props.get("tlMessage",""), 
+			'message' : self.generateMessage(action.props.get("tlMessage","")),
 			'from': self.textlocalFromValue,
 			'json': 1}
 
@@ -83,13 +83,41 @@ class Plugin(indigo.PluginBase):
 				if jsonResponse['Error'] == "No credit" or jsonResponse['Error'] == "Not enough credit":
 					for trigger in self.events[kTriggerType_CreditExpired]:
 						indigo.trigger.execute(trigger)
-				indigo.server.log("Received an error from TextLocal: %s" % (jsonResponse['Error']))
+				self.logger.info("received an error from TextLocal: %s" % (jsonResponse['Error']))
 			else:
 				# check for current credit value.  if number = 10 then fire lowcredit message, if 0 then error
 				if 'CreditsRemaining' in jsonResponse and int(jsonResponse['CreditsRemaining']) <= int(self.textlocalCreditWarning):
-					indigo.server.log("Credit warning for your TextLocal account")
+					self.logger.warn("credit warning for your TextLocal account")
 					for trigger in self.events[kTriggerType_CreditLow]:
 						indigo.trigger.execute(trigger)
-				indigo.server.log("Message successfully sent via TextLocal")
+				self.logger.info("message successfully sent via TextLocal")
 		except IOError:
-			indigo.server.log("Unable to contact TextLocal service.")
+			self.logger.info("unable to contact TextLocal service.")
+
+	def generateMessage(self, text):
+		# a very simple templating engine to extract IOM expressions
+		potential = False
+		evaluate = False
+		result = ""
+		evalstr = ""
+		for char in text:
+			if char == "$":
+				potential = True
+			elif char == "{" and potential:
+				evaluate = True
+			elif char == "}":
+				if evaluate:
+					result = result + str(eval(evalstr))
+					evalstr = ""
+					potential = False
+					evaluate = False
+				else:
+					# found } but not in eval state
+					result = result + char
+			else:
+				if evaluate:
+					evalstr = evalstr+char
+				else:
+					result = result + char
+					potential = False
+		return result
